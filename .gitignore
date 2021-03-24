@@ -1,0 +1,9 @@
+*.swp
+*.swo
+build/
+*build/
+pfiles/
+client/img/*.png
+client.glsl.h
+*.rdbg
+*.cap
