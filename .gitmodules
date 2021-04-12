@@ -6,4 +6,4 @@
 	url = https://github.com/bqqbarbhg/bq_websocket
 [submodule "formpack/metadesk"]
 	path = formpack/metadesk
-	url = https://github.com/Dion-Systems/metadesk.git
+	url = https://github.com/Dion-Systems/metadesk
