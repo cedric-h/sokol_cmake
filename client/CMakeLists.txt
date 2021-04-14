@@ -14,6 +14,25 @@ endif()
 #=== LIBRARY: microui
 add_library(microui STATIC ../mui/microui.c)
 
+#=== LIBRARY: bq_websocket
+add_library(bq_websocket STATIC ../bq_websocket/bq_websocket_platform.c
+                                ../bq_websocket/bq_websocket_platform.h
+                                ../bq_websocket/bq_websocket.c
+                                ../bq_websocket/bq_websocket.h)
+
+#== LIBRARY: formpack
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+    set(RUN_FORMPACK_GEN_CMD "\"./../../formpack/build/Debug/gen.exe\"")
+else()
+    set(RUN_FORMPACK_GEN_CMD "../../formpack/build/gen")
+endif()
+add_custom_command(OUTPUT ../../formpack/build/formpack.h
+    COMMAND cmake --build ../../formpack/build/ && ${RUN_FORMPACK_GEN_CMD}
+    DEPENDS ../formpack/formpack.dd
+    DEPENDS ../formpack/gen.c
+)
+set_source_files_properties(../../formpack/build/formpack.h PROPERTIES GENERATED TRUE)
+
 #== OPTION: colored output
 if ("${CMAKE_GENERATOR}" STREQUAL "Ninja")
     option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
@@ -75,17 +94,18 @@ set_source_files_properties(../shaders.glsl.h PROPERTIES
 
 #=== EXECUTABLE: client
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
-    add_executable(client WIN32 main.c ../shaders.glsl.h)
+    add_executable(client WIN32 main.c ../shaders.glsl.h  ../../formpack/build/formpack.h)
 
     set_target_properties(client PROPERTIES
         LINK_FLAGS /SUBSYSTEM:CONSOLE
     )
 else()
-    add_executable(client main.c ../shaders.glsl.h)
+    add_executable(client main.c ../shaders.glsl.h  ../../formpack/build/formpack.h)
 endif()
 
 target_link_libraries(client sokol)
 target_link_libraries(client microui)
+target_link_libraries(client bq_websocket)
 if (CMAKE_SYSTEM_NAME STREQUAL Emscripten)
     target_link_options(client PUBLIC --shell-file ../../sokol/shell.html)
     target_link_options(client PUBLIC -sNO_FILESYSTEM=1 

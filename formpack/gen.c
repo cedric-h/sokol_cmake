@@ -22,8 +22,10 @@ void gen_tagun(MD_Node *node);
 
 static FILE *f;
 int main(int argument_count, char **arguments) {
-    MD_Node *code = MD_ParseWholeFile(MD_S8Lit("../formpack/formpack.dd"));
-    f = fopen("../formpack/build/formpack.h", "wb");
+    printf("generating formpack ..");
+
+    MD_Node *code = MD_ParseWholeFile(MD_S8Lit("../../formpack/formpack.dd"));
+    f = fopen("../../formpack/build/formpack.h", "wb");
     
     for (MD_EachNode(node, code->first_child))
         if (MD_NodeHasTag(node, MD_S8Lit("struct")))
@@ -74,10 +76,14 @@ MD_String8 snake_case(MD_String8 s) {
     MD_String8List result = {0},
                    words = MD_SplitStringByCharacter(s, '_');
     for (MD_String8Node *s8n = words.first; s8n != NULL; s8n = s8n->next) {
-        MD_String8 new = MD_StyledStringFromString(s8n->string,
-                                                   MD_WordStyle_LowerCase,
-                                                   MD_S8Lit("_"));
-        MD_PushStringToList(&result, new);
+        if (s8n->string.size == 1) {
+            MD_PushStringToList(&result, s8n->string);
+        } else {
+            MD_String8 new = MD_StyledStringFromString(s8n->string,
+                                                       MD_WordStyle_LowerCase,
+                                                       MD_S8Lit("_"));
+            MD_PushStringToList(&result, new);
+        }
     }
     return MD_JoinStringListWithSeparator(result, MD_S8Lit("_"));
 }
@@ -155,9 +161,18 @@ void gen_struct_encoded_size(MD_Node *stru) {
     for (MD_EachNode(field, stru->first_child)) {
         assert_field_just_type(field);
         MD_Node *type = field->first_child;
-        fprintf(f, "\n + encoded_size_%.*s(&v->%.*s)",
-               MD_StringExpand(snake_case(type->string)),
-               MD_StringExpand(field->string));
+
+        if (MD_NodeHasTag(type, MD_S8Lit("as"))) {
+            MD_Node *as_type = type->first_tag->first_child;
+            fprintf(f, "\n + encoded_size_%.*s(&((%.*s)v->%.*s))",
+                   MD_StringExpand(snake_case(as_type->string)),
+                   MD_StringExpand(as_type->string),
+                   MD_StringExpand(field->string));
+        } else {
+            fprintf(f, "\n + encoded_size_%.*s(&v->%.*s)",
+                   MD_StringExpand(snake_case(type->string)),
+                   MD_StringExpand(field->string));
+        }
     }
     fprintf(f, ";\n}\n\n"); // end encoded_size_<stru> function
 }
@@ -183,13 +198,17 @@ void gen_tagun_encoded_size(MD_Node *node) {
 
 // -------------------------- ENCODE ----------------------------------
 void gen_struct_encode(MD_Node *stru) {
-    fprintf(f, "uint8_t *encode_%.*s(uint8_t *data, %.*s *v) {\n",
+    fprintf(f, "uint8_t *encode_%.*s(uint8_t *data, %.*s v) {\n",
            MD_StringExpand(snake_case(stru->string)),
            MD_StringExpand(stru->string));
     for (MD_EachNode(field, stru->first_child)) {
         assert_field_just_type(field);
         MD_Node *type = field->first_child;
-        fprintf(f, "data = encode_%.*s(data, &v->%.*s);\n",
+
+        if (MD_NodeHasTag(type, MD_S8Lit("as")))
+            type = type->first_tag->first_child;
+
+        fprintf(f, "data = encode_%.*s(data, v.%.*s);\n",
                MD_StringExpand(snake_case(type->string)),
                MD_StringExpand(field->string));
     }
@@ -211,7 +230,7 @@ void gen_tagun_encode(MD_Node *node) {
     for (MD_EachNode(variant, node->first_child)) {
         fprintf(f, "case (%.*s):\n",
                MD_StringExpand(variant_kind(node, variant)));
-        fprintf(f, " writer = encode_%.*s(writer, &d->%.*s);\n break;\n",
+        fprintf(f, " writer = encode_%.*s(writer, d->%.*s);\n break;\n",
                MD_StringExpand(snake_case(variant_struct_name(node, variant))),
                MD_StringExpand(snake_case(variant->string)));
     }
@@ -229,6 +248,10 @@ void gen_struct_decode(MD_Node *stru) {
     for (MD_EachNode(field, stru->first_child)) {
         assert_field_just_type(field);
         MD_Node *type = field->first_child;
+
+        if (MD_NodeHasTag(type, MD_S8Lit("as")))
+            type = type->first_tag->first_child;
+
         fprintf(f, ".%.*s = decode_%.*s(data),\n",
                MD_StringExpand(field->string),
                MD_StringExpand(snake_case(type->string)));

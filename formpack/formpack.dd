@@ -1,15 +1,25 @@
 @tagun NetToServer: {
-    AccountExists: { user: String },
-    AccountTrial: { user: String },
-    AccountRegister: { user: String, pass: String },
-    AccountLogin: { user: String, pass: String },
+    Heartbeat: { ballast: bool },
+    InputTick: {
+        input_x: float,
+        input_y: float,
+    },
+}
+
+@struct NetVec2: {
+    x: float,
+    y: float,
+}
+
+@struct NetEnt: {
+    pos: NetVec2,
+    scale: NetVec2,
+    rot: float,
+    art_hint: @as(uint8_t) ArtHint,
 }
 
 @tagun NetToClient: {
-    AccountStatus: { user: String, exists: bool },
-    AccountBadUser: { user: String, reason: String },
-    AccountBadPass: { pass: String, reason: String },
-    AccountTrialAccept: { user: String },
-    AccountLoginAccept: { user: String },
-    AccountServerError: { desc: String },
+    Heartbeat: { ballast: bool },
+    WorldMapSpawn: { map_ent: NetEnt },
+    WorldSpawn: { player_ent: NetEnt },
 }

@@ -261,7 +261,7 @@ static void rcx_draw_commands(mu_Context* ctx, float width, float height) {
 
     /* default pass action */
     sg_pass_action pass_action = {
-        .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.3f, 0.3f, 0.3f, 1.0f } }
+        .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.25f, 0.25f, 0.3f, 1.0f } }
     };
 
     sg_begin_default_pass(&pass_action, (int) width, (int) height);
